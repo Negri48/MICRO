@@ -22,3 +22,9 @@ data/DoctrineORMModule/cache/
 # Legacy ZF1
 demos/
 extras/documentation
+
+*.MAP
+*.OBJ
+*.EXE
+*.WAV
+*.LST
