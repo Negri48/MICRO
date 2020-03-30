@@ -143,7 +143,7 @@ INICIO PROC
   MOV WORD PTR [DI], AX ; Copiamos los dos siguientes bytes en la variable simple_rate
 
   MOV DI, OFFSET sample_rate
-  CALL ASCII_to_DEC
+  CALL HEX_to_ASCII
  
   ;Imprimimos el valor de sample_rate
   MOV DX, OFFSET ASCII_CONV
@@ -188,7 +188,7 @@ INICIO PROC
   MOV WORD PTR [DI], AX
 
   MOV DI, OFFSET numeromuestras
-  CALL ASCII_to_DEC
+  CALL HEX_to_ASCII
 
   ;Imprimimos el valor del numero de muestras
   MOV DX, OFFSET ASCII_CONV
@@ -210,7 +210,7 @@ INICIO PROC
 
   ;Conversion a numero decimal de la variable canales
   MOV DI, OFFSET canales
-  CALL ASCII_to_DEC
+  CALL HEX_to_ASCII
 
   ;Imprimimos el valor del numero de canales
   MOV DX, OFFSET ASCII_CONV
@@ -235,7 +235,7 @@ INICIO PROC
 
   ;Conversiona numero decimal
   MOV DI, OFFSET bytes
-  CALL ASCII_to_DEC
+  CALL HEX_to_ASCII
 
   ;Imprimimos el valor del numero de bytes por segundo
   MOV DX, OFFSET ASCII_CONV
@@ -253,7 +253,7 @@ INICIO ENDP
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;SUBRUTINA PASAR ELEMENTO A ASCII
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-ASCII_to_DEC PROC NEAR
+HEX_to_ASCII PROC NEAR
 	;CODIGO SUBRUTINA
 
 	MOV WORD PTR ASCII_CONV[0], 0
@@ -300,7 +300,7 @@ ASCII_to_DEC PROC NEAR
 		; Retorna a la rutina principal
 		RET ;Fin de la subrutina	
 
-ASCII_to_DEC ENDP
+HEX_to_ASCII ENDP
 
 
 ; FIN DEL SEGMENTO DE CODIGO
