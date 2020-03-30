@@ -104,11 +104,11 @@ INICIO ENDP
 
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;HEX_to_ASCII : Subrutina que pasa un elemento en memoria a ASCII
-;ARGS_INPUT: DI debe contenter lo que queremos pasar a ASCII
-;ARGS_OUTPUT: codigo_error contiene DI escrito en ASCII
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;ARGS_INPUT: AX debe contenter lo que queremos pasar a ASCII
+;ARGS_OUTPUT: codigo_error contiene AX escrito en ASCII
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 HEX_to_ASCII PROC NEAR
 	
 	MOV WORD PTR codigo_error[0], 0 ;Inicializo la varible a 0 (por si estuviese escrita)
@@ -144,5 +144,6 @@ HEX_to_ASCII PROC NEAR
 		RET ;Fin de la subrutina	
 
 HEX_to_ASCII ENDP
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 CODE ENDS
 END INICIO

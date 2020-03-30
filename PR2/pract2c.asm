@@ -1,36 +1,46 @@
 ;**************************************************************************
-; SBM 2018. ESTRUCTURA BÁSICA DE UN PROGRAMA EN ENSAMBLADOR
+; PRACTICA 2 SBM 2020. Ejercicio C
+;**************************************************************************
+; Autores: Rodrigo Lardiés Guillén         NIA 382246 Gr 2301
+;          Víctor Sánchez de la Roda Núñez NIA 380451 Gr 2301
 ;**************************************************************************
 ;DEFINICION DEL SEGMENTO DE DATOS 
 DATOS SEGMENT
+  ;Variables declaradas
   nombrefichero db 0, 0;nombre
   fichero db 30, 33 dup(0),13, 10, '$' ;nombre del fichero
-  tipo db 8 dup(0), 13, 10, '$';
-  sample_rate db 4 dup(0),13, 10,'$' ;
-  numeromuestras db 4 dup(0), 13, 10, '$'
-  totalbytes db 4 dup(0), 13, 10, '$'
-  bytesmuestra db 2 dup(0), 13, 10, '$'
+  tipo db 8 dup(0), 13, 10, '$';Varibale donde guardaremos el tipo
+  sample_rate db 4 dup(0),13, 10,'$' ;Variable donde guardaremos el Sample_Rate
+  numeromuestras db 4 dup(0), 13, 10, '$' ;Variable donde guardaremos el número de muestras
+  totalbytes db 4 dup(0), 13, 10, '$' ;Varible donde guardaremos el nº total de Bytes
+  bytesmuestra db 2 dup(0), 13, 10, '$';Variable donde guardaremos los bytes por muestra
   
-  canales db 2 dup(0), 13, 10, '$'; 
-  bytes db 4 dup(0), 13, 10, '$';
+  canales db 2 dup(0), 13, 10, '$'; Variable donde guardaremos el número de canales
+  bytes db 4 dup(0), 13, 10, '$';Variable donde guardaremos el número de bytes
   buffer db 44 dup(0),13, 10, '$' ; buffer en el que leeremos del archivo
 
-  textonombre db "Introduzca el nombre del archivo:",13, 10,'$'; Texto que se mostrara por pantalla
-  textofilename db "Filename: ", '$'; 
-  textotipo db "Tipo de Archivo: ", '$'
-  textofrecuencia db "Sample-rate: ",'$';
-  textomuestras db "Numero de muestras: ", '$'
-  textocanales db "Numero de canales: ", '$'
-  textobytes db "Bytes por segundo: ", '$'
-  
-  ASCII_CONV db 10 dup(0),13,10,'$'
-  CONT_ELEM db 1 dup(0)
+  textonombre db "Introduzca el nombre del archivo:",13, 10,'$';Mensaje que pide el nombre del archivo que aparecerá por pantalla
+  textofilename db "Filename: ", '$'; Mensaje que aparece por pantalla
+  textotipo db "Tipo de Archivo: ", '$' ; Mensaje que aparece por pantalla
+  textofrecuencia db "Sample-rate: ",'$'; Mensaje que aparece por pantalla
+  textomuestras db "Numero de muestras: ", '$' ; Mensaje que aparece por pantalla
+  textocanales db "Numero de canales: ", '$' ; Mensaje que aparece por pantalla
+  textobytes db "Bytes por segundo: ", '$' ; Mensaje que aparece por pantalla
+  error_open db "Error abriendo el fichero (fopen) con codigo de error: ",'$' ;Mensaje de error que aparecerá por pantalla en el caso del open
+  error_close db "Error cerrando el fichero (fclose) con codigo de error: ",'$' ;Mensaje de error que aparecerá por pantalla en el caso del close
+  error_write db "Error escribiendo el fichero (Write_WAV) con codigo de error: ",'$' ;Mensaje de error que aparecerá por pantalla en el caso del write
+  cab_incompleta db "Error al leer la cabecera (fread). La cabecera es incompleta.",'$'; Mensaje de error que aparecerá por pantalla en el caso que fread devuelva más de 0 y menos de 44 bytes
+  cab_vacia db "Error al leer la cabecera (fread). La cabecera es vacía.",'$'; Mensaje de error que aparecerá por pantalla en el caso que fread devuelva 0 bytes
+  cab_erronea db "Error al leer la cabecera (fread). La cabecera es errónea.",'$' ; Mensaje de error que aparecerá por pantalla en el caso que la cabecera no contenga las palabras de estado.
+  ascii_conv db 10 dup(0),13,10,'$' ; Variable donde guardaremos los hexadecimales convertidos en ASCII para imprimirlos por pantalla
+  cont_elem db 1 dup(0) ; Contador que se utilizará para saber cuántos elementos metemos/sacamos de la pila
+  codigo_error db 2 dup(0),13,10,'$' ;Palabra donde almacenaremos el código de error correspondiente en ASCII para imprimirlo
 
-
-EXTRN fopen:FAR
-EXTRN fread:FAR
-EXTRN fclose:FAR
-DATOS ENDS 
+  ;Referencias a funciones dee módulos externos
+  EXTRN fopen:FAR
+  EXTRN fread:FAR
+  EXTRN fclose:FAR
+  DATOS ENDS 
 ;************************************************************************** 
 ; DEFINICION DEL SEGMENTO DE PILA 
 PILA SEGMENT STACK "STACK" 
@@ -38,6 +48,9 @@ PILA ENDS
 ;************************************************************************** 
 ; DEFINICION DEL SEGMENTO EXTRA 
 EXTRA SEGMENT 
+  textoRIFF db "RIFF" ;Variable que usamos para comparar
+  textoWAVEfmt db "WAVEfmt";Variable que usamos para comparar
+  textodata db "data" ;Varible que usamos para comparar
 EXTRA ENDS 
 ;************************************************************************** 
 ; DEFINICION DEL SEGMENTO DE CODIGO 
@@ -61,30 +74,39 @@ INICIO PROC
 
   ;Leemos el nombre del archivo escrito por teclado
   MOV AH, 0AH ;Función captura de teclado
-  MOV DX, OFFSET nombrefichero 
+  MOV DX, OFFSET nombrefichero ;DX : offset al inicio de la variable
   MOV nombrefichero[0], 30
   INT 21H 
-
+  ;Al leer debemos quitar los dos primeros bytes que los utiliza el SO
   MOV BL, nombrefichero[1]
   MOV BH, 0
   ADD BX, 2
   MOV nombrefichero[BX], 0
-  ;nombrefichero = nombrefichero + 2, Asi nos quitamos los dos primeros bytes y nombrefichero apunta a la cadena del nombre directamente
 
-  ;Abrimos el fichero
-  MOV DX, OFFSET fichero ;Cargamos en DX la posicion donde empieza el nombre del fichero
-  CALL fopen  ;fopen carga en AX el descriptor del fichero que abre y si hay un error CF=1
+  ;Abrimos un fichero en el disco, almacenando en AX el descriptor o en caso de error el código correspondiente además de CF = 1
+  MOV DX, OFFSET fichero;Guardamos en DX la direccion del nombre del fichero, OFFSET devuelve donde empieza fichero
+  CALL fopen
+  JNC CONTINUA_OPEN ;Si no hay error (CF = 0) seguimos la ejecución de la rutina
+  JMP FIN_OPEN ;Si hay error (CF = 1) saltamos a la rutina que muestra el error y termina el programa
 
-  ;leemos la cabecera del fichero y la guardamos en el buffer
+  CONTINUA_OPEN:
+  ;Leemos la cabecera del fichero y la guardamos en el buffer
   MOV BX, AX
   MOV CX, 44 ; bytes que se van a leer
   MOV DX, OFFSET buffer ;direccion del buffer
   CALL fread ;fread carga en AX los bytes que de han leido y si hay un error CF=1
+  JNC CONTINUA_READ
+  JMP FIN_READ ;Si hay error en el fread termina el programa
+  CONTINUA_READ:
+    JMP COMPROBACIONES_READ ;Comprobamos si la cabecera es correcta.
 
-
-  ;Cerramos el archivo y en AX ya esta el descriptor del fichero 
+  CONTINUA_COMPROBACIONES:  
+  ;Cerramos el archivo y en BX ya esta el descriptor del fichero 
   CALL fclose
-
+  JNC CONTINUA_CLOSE ;Si no hay error (CF = 0) seguimos la ejecución de la rutina
+  JMP FIN_CLOSE ;Si hay error (CF = 1) saltamos a la rutina que muestra el error y termina el programa
+  CONTINUA_CLOSE:
+    
 
 
   ;Mostramos el texto filename
@@ -143,10 +165,10 @@ INICIO PROC
   MOV WORD PTR [DI], AX ; Copiamos los dos siguientes bytes en la variable simple_rate
 
   MOV DI, OFFSET sample_rate
-  CALL HEX_to_ASCII
+  CALL HEX_to_ASCII ;Como es un número tenemos que transformalo a ASCII para imprimir
  
   ;Imprimimos el valor de sample_rate
-  MOV DX, OFFSET ASCII_CONV
+  MOV DX, OFFSET ascii_conv
   MOV AH, 9
   INT 21H
 
@@ -188,10 +210,10 @@ INICIO PROC
   MOV WORD PTR [DI], AX
 
   MOV DI, OFFSET numeromuestras
-  CALL HEX_to_ASCII
+  CALL HEX_to_ASCII ;Como es un número tenemos que transformalo a ASCII para imprimir
 
   ;Imprimimos el valor del numero de muestras
-  MOV DX, OFFSET ASCII_CONV
+  MOV DX, OFFSET ascii_conv
   MOV AH, 9
   INT 21H
 
@@ -210,10 +232,10 @@ INICIO PROC
 
   ;Conversion a numero decimal de la variable canales
   MOV DI, OFFSET canales
-  CALL HEX_to_ASCII
+  CALL HEX_to_ASCII ;Como es un número tenemos que transformalo a ASCII para imprimir
 
   ;Imprimimos el valor del numero de canales
-  MOV DX, OFFSET ASCII_CONV
+  MOV DX, OFFSET ascii_conv
   MOV AH, 9
   INT 21H
 
@@ -235,73 +257,166 @@ INICIO PROC
 
   ;Conversiona numero decimal
   MOV DI, OFFSET bytes
-  CALL HEX_to_ASCII
+  CALL HEX_to_ASCII ;Como es un número tenemos que transformalo a ASCII para imprimir
 
   ;Imprimimos el valor del numero de bytes por segundo
-  MOV DX, OFFSET ASCII_CONV
+  MOV DX, OFFSET ascii_conv
   MOV AH, 9
   INT 21H
 
  
 
-FIN: MOV AX, 4C00H
+FIN: ;Rutina que termina el programa
+   MOV AX, 4C00H
   INT 21H
 
+FIN_OPEN: ;Rutina que termina el programa si hay error en fopen
+  CALL HEX_to_ASCII ;Transformamos el codigo de error (almacenado en AX) a ASCII para imprimir
+  MOV DX, OFFSET error_open ;Imprimimos el mensaje de error de fopen
+  MOV AH, 9
+  INT 21H
+  MOV DX, OFFSET codigo_error ;Imprimimos el codigo de error provocado
+  MOV AH, 9
+  INT 21H
+  JMP FIN
+
+FIN_CLOSE: ;Rutina que termina el programa si hay error en fclose
+  CALL HEX_to_ASCII ;Transformamos el código de error (almacenado en AX) a ASCII para imprimir
+  MOV DX, OFFSET error_close ;Imprimimos el mensaje de error de fopen
+  MOV AH, 9
+  INT 21H
+  MOV DX, OFFSET codigo_error ;Imprimimos el codigo de error provocado
+  MOV AH, 9
+  INT 21H
+  JMP FIN
+
+FIN_WRITE: ;Rutina que termina el programa si hay error en Write_WAW
+  CALL HEX_to_ASCII ;Transformamos el código de error (almacenado en AX) a ASCII para imprimir
+  MOV DX, OFFSET error_write ;Imprimimos el mensaje de error de Write_WAV
+  MOV AH, 9
+  INT 21H
+  MOV DX, OFFSET codigo_error ;Imprimimos el codigo de error provocado
+  MOV AH, 9
+  INT 21H
+  CALL fclose ;Cerramos el descriptor de fichero que sigue estando contenido en BX
+  JMP FIN
+
+FIN_READ: ;Rutina que termina el programa si hay error en fread
+  CALL HEX_to_ASCII ;Transformamos el código de error (almacenado en AX) a ASCII para imprimir
+  MOV DX, OFFSET error_write ;Imprimimos el mensaje de error de fread
+  MOV AH, 9
+  INT 21H
+  MOV DX, OFFSET codigo_error ;Imprimimos el codigo de error provocado
+  MOV AH, 9
+  INT 21H
+  CALL fclose ;Cerramos el descriptor de fichero que sigue estando contenido en BX
+  JMP FIN
+COMPROBACIONES_READ: ;Rutina que comprueba que el read ha sido válido
+  CMP AX,44 ;Comprobamos que se ha leído la cabecera entera
+  JNZ ERROR_CABECERA_INCOMPLETA
+  CMP AX,0 ;Comprobamos que no es vacía
+  JZ ERROR_CABECERA_VACIA
+  ;;Comprobamos que haya leído RIFF
+  CLD ;Limpiamos el flag de direccion para incrementar las posiciones de memoria (ir de izq a der)
+  MOV CX, 4 ;Inicializamos una cantidad de Bytes (4 valen porque "R I F F" cabe )
+  MOV DI, OFFSET textoRIFF ;Almacenamos en ES:DI el texto que hace de escape en la rutina
+  MOV SI, OFFSET buffer  ;Almacenamos en DS:SI la cabecera del fichero WAV
+  REPE CMPSB ;Realiza la operación de comparación entre ES:DI DS:SI Byte a Byte para los primeros CX Bytes
+             ;Poniendo ZF = 0 la primera vez que encuentre mismatch en la comparación
+  JNE TERMINA_COMPROBACIONES ;Si ZF = 0 termina el programa
+  ;;Comprobamos que haya leído WAVEfmt
+  CLD ;Limpiamos el flag de direccion para incrementar las posiciones de memoria (ir de izq a der)
+  MOV CX, 7 ;Inicializamos una cantidad de Bytes (7 valen porque "W A V E f m t" cabe )
+  MOV DI, OFFSET textoWAVEfmt ;Almacenamos en ES:DI el texto que hace de escape en la rutina
+  MOV SI, OFFSET buffer  ;Almacenamos en DS:SI la cabecera del fichero WAV
+  ADD SI,8
+  REPE CMPSB ;Realiza la operación de comparación entre ES:DI DS:SI Byte a Byte para los primeros CX Bytes
+             ;Poniendo ZF = 0 la primera vez que encuentre mismatch en la comparación
+  JNE TERMINA_COMPROBACIONES ;Si ZF = 0 termina el programa
+  ;;Comprobamos que haya leído data
+  CLD ;Limpiamos el flag de direccion para incrementar las posiciones de memoria (ir de izq a der)
+  MOV CX, 4 ;Inicializamos una cantidad de Bytes (4 valen porque "d a t a" cabe )
+  MOV DI, OFFSET textodata ;Almacenamos en ES:DI el texto que hace de escape en la rutina
+  MOV SI, OFFSET buffer  ;Almacenamos en DS:SI la cabecera del fichero WAV
+  ADD SI,36
+  REPE CMPSB ;Realiza la operación de comparación entre ES:DI DS:SI Byte a Byte para los primeros CX Bytes
+             ;Poniendo ZF = 0 la primera vez que encuentre mismatch en la comparación
+  JNE TERMINA_COMPROBACIONES ;Si ZF = 0 termina el programa
+
+  JMP CONTINUA_COMPROBACIONES ;Si todo es correcto continuamos con la ejecucion
+
+
+ERROR_CABECERA_INCOMPLETA: ;Rutina que termina el programa en el caso de que la cabecera sea incompleta
+  MOV DX, OFFSET cab_incompleta ;Imprimimos el mensaje de error de cabecera incompleta
+  MOV AH, 9
+  INT 21H
+  CALL fclose
+  JMP FIN
+
+ERROR_CABECERA_VACIA: ;Rutina que termina el programa en el caso de que la cabecera sea vacía
+  MOV DX, OFFSET cab_vacia ;Imprimimos el mensaje de error de cabecera vacia
+  MOV AH, 9
+  INT 21H
+  CALL fclose
+  JMP FIN
+TERMINA_COMPROBACIONES: ;Rutina que termina el programa en el caso de que la cabecera sea errónea
+  MOV DX, OFFSET cab_erronea ;Imprimimos el mensaje de error de cabecera errorea
+  MOV AH, 9
+  INT 21H
+  CALL fclose
+  JMP FIN
 INICIO ENDP
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;SUBRUTINA PASAR ELEMENTO A ASCII
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;HEX_to_ASCII : Subrutina que pasa un elemento en memoria a ASCII
+;ARGS_INPUT: AX debe contenter lo que queremos pasar a ASCII
+;ARGS_OUTPUT: codigo_error contiene AX escrito en ASCII
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 HEX_to_ASCII PROC NEAR
 	;CODIGO SUBRUTINA
 
-	MOV WORD PTR ASCII_CONV[0], 0
-	MOV WORD PTR ASCII_CONV[2], 0
-	MOV WORD PTR ASCII_CONV[4], 0
-	MOV WORD PTR ASCII_CONV[6], 0
-	MOV WORD PTR ASCII_CONV[8], 0
+	MOV WORD PTR ascii_conv[0], 0
+	MOV WORD PTR ascii_conv[2], 0
+	MOV WORD PTR ascii_conv[4], 0
+	MOV WORD PTR ascii_conv[6], 0
+	MOV WORD PTR ascii_conv[8], 0
 	
 	MOV AX, WORD PTR [DI] ; Carga en AX el elemento que queremos convertir a ASCII para poder realizar la operacion DIV
 	
+	
  	RESTO_DIV:
-		MOV DX, 0
-		MOV CX, 10
-		DIV CX ; Divide DX:AX entre el operando DIEZ, cargando en AX el cociente de la division y en DX el resto
-		ADD DX, 48 ;Sumamos 30 al resto de la division para convertirlo a ascii
-		PUSH DX ;Añadimos el resto en ascii a la pila
-		INC CONT_ELEM ;Incrementamos el contador, para llevar la cuenta de los elementos de la pila
+		MOV DX, 0 ;Inicializo DX = 0
+		MOV CX, 10 ;Inicializo CX = 10
+		DIV CX ; Divide DX:AX entre 10 (CX), cargando en AX el cociente de la division y en DX el resto
+		ADD DX, 48 ;Sumamos 48 (30H) al resto de la division para convertirlo a ASCII 
+		PUSH DX ;Lo metemos en la pila
+		INC cont_elem ;Incrementamos el contador, para llevar la cuenta de los elementos de la pila
 		CMP AX, 0 ;Comparamos AX (cociente de la division) con 0.
-		JNE RESTO_DIV ;Si AX no es cero volvemos a dividir, hasta que este sea 0
+		JNE RESTO_DIV ;Si AX != 0 repetimos el proceso
 	
 	; Si el cociente es 0, continuamos
-	MOV DI, OFFSET ASCII_CONV
-	JMP BUCLE ; pasamos a sacar el primer elemento de la pila
+	MOV DI, OFFSET ascii_conv
+	JMP BUCLE_2 ;Sacamos elementos de la pila
 	
 	
-	BUCLE:
+	BUCLE_2:
 		POP DX ;Sacamos el primer elemento de la pila
-		ADD DI, 1
-		MOV [DI], DX ; Escribimos el elemento sacado de la pila en ASCII_CONV
-		INC CX ;Incrementamos el contador de las posiciones del resutado ascii
-		DEC CONT_ELEM; Decrementamos el contador de elementos de la pila (hemos sacado uno (pop))
-		CMP CONT_ELEM,0 
-		JNE BUCLE ;Si el contador no es cero, es decir, si quedan elementos en la pila, continuamos en el bucle
-		
-		; Si ya hemos sacado todos los elementos de la pila y los hemos guardado en las correspondientes posiciones del resultado ASCII
-		ADD DI, 1
-		MOV ASCII_CONV[DI], '$' ; Y añadimos un $ al final de la cadena para imprimir con la funcion 9H
-		
+		ADD DI, 1 ;Avanzamos la posición en la variable
+		MOV [DI], DX ; Escribimos el elemento sacado de la pila en codigo_error
+		DEC cont_elem; Decrementamos el contador de elementos
+		CMP cont_elem,0 ;Si no quedan elementos por sacar seguimos
+		JNE BUCLE_2 ;Si cont_elem != 0 repetimos el proceso
+				
 		;Guardamos el segmento y el offset del valor que hemos obtenido
-		MOV DX, SEG ASCII_CONV
-		MOV AX, OFFSET ASCII_CONV
+		MOV DX, SEG ascii_conv
+		MOV AX, OFFSET ascii_conv
 
-		
 		; Retorna a la rutina principal
 		RET ;Fin de la subrutina	
 
 HEX_to_ASCII ENDP
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; FIN DEL SEGMENTO DE CODIGO
 CODE ENDS
