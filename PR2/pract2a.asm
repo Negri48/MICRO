@@ -3,7 +3,7 @@
 ;**************************************************************************
 ;DEFINICION DEL SEGMENTO DE DATOS 
 DATOS SEGMENT
-tabla db 444 dup (9 dup (50), 9 dup (-50)), 8 dup (50); Tabla de 8000 bytes de la onda ya inicializada, 444*18 + 8 = 8000
+tabla db 440 dup (9 dup (50), 9 dup (-50)), 80 dup (0); Tabla de 8000 bytes de la onda ya inicializada, 444*18 + 8 = 8000
 ;9 bytes arriba (50), despues 9 bytes abajo (-50), y asi sucesivamente.
 fichero db "gen_la.wav", 0; Guardamos el nombre del fichero en datos 
 EXTRN Init_WAV_header:FAR

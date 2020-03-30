@@ -3,7 +3,7 @@
 ;**************************************************************************
 ;DEFINICION DEL SEGMENTO DE DATOS 
 DATOS SEGMENT
-  tabla db 8000 dup(0); Tabla de 8000 bytes de la onda ya inicializada, 444*18 + 8 = 8000
+  tabla db 8000 dup(0); Tabla de 8000 bytes de la onda ya inicializada
 ;9 bytes arriba (50), despues 9 bytes abajo (-50), y asi sucesivamente.
   nombrefichero db 0, 0;nombre
   fichero db 30, 33 dup(0),13, 10, '$' ;nombre del fichero
@@ -11,7 +11,7 @@ DATOS SEGMENT
   textofrec db "Frecuencia (Hz) deseada: ",13,10,'$'; Texto que se mostrara por pantalla
   
   salida db "Hasta luego!",'$' ;Palabra que indica el fin del bucle
-  salidanoquit db "Salida NORMAL!",'$' ;Palabra que indica el fin del bucle
+  salidanoquit db "Archivo creado correctamente.",13,10,'$' ;Palabra que indica el fin del bucle
   frecuencia db 4 dup(0), 13, 10, '$'
 
   frec_hex db 2 dup(0),13,10,'$'
@@ -29,7 +29,7 @@ PILA ENDS
 ;************************************************************************** 
 ; DEFINICION DEL SEGMENTO EXTRA 
 EXTRA SEGMENT
-textoquit db "quit" ;Palabra que indica el fin del bucle
+  textoquit db "quit" ;Palabra que indica el fin del bucle
 EXTRA ENDS 
 ;************************************************************************** 
 ; DEFINICION DEL SEGMENTO DE CODIGO 
@@ -76,11 +76,7 @@ FUNC_PRINCIPAL PROC NEAR
     MOV nombrefichero[BX], 0
     ;;Si lo que hemos introducido es "quit" tenemos que terminar el programa
     CLD
-<<<<<<< HEAD
-    MOV CX, 4 ;;Inicializamos una cantidad de Bytes (4 valen porque q u i t)
-=======
     MOV CX, 5 ;;Inicializamos una cantidad de Bytes (4 valen porque "quit cabe")
->>>>>>> cf17f88804c48888c75ad5bd671a83673b0e6af6
     MOV DI, OFFSET textoquit
     MOV SI, OFFSET fichero 
     REPE CMPSB 
@@ -104,7 +100,11 @@ FUNC_PRINCIPAL PROC NEAR
     ADD DI, 2
     CALL ASCII_to_DEC
 
+    ;Modificar la tabla para que oscile tantas veces como la frecuenca que se pasa como argumento
+    MOV DI, OFFSET frec_hex
+    CALL CREA_TABLA
 
+    ;Escribir en disco la señal creada
     ;Inicializar el modulo WAV especificando la frecuencia de muestreo
     ;SAMPLE RATE
     MOV DX, 8000
@@ -118,18 +118,26 @@ FUNC_PRINCIPAL PROC NEAR
     MOV DX, OFFSET fichero
     CALL fopen
 
-    ;Modificar la tabla para que oscile tantas veces como la frecuenca que se pasa como argumento
-    MOV DI, OFFSET frec_hex
-    MOV AX, WORD PTR [DI]
+    ;Guardamos en BX el descriptor y en DI el comienzo de la tabla
+    MOV BX, AX
+     MOV DI, OFFSET tabla
+    ;Llamamos a Write_WAV que carga en AX el numero total de bytes escritos
+    CALL Write_WAV
+
+  
+
+    ;Cerramos el archivo y en AX ya esta el descriptor del fichero 
+    CALL fclose
+    
+
+
 
     ;Imprime el texto de salida del programa
     MOV DX, OFFSET salidanoquit ; DX : offset al inicio del texto a imprimir
     MOV AH, 9
     INT 21H
 
-
-  RET
-
+    JMP FUNCION
 
 
   TERMINA:
@@ -180,6 +188,43 @@ ASCII_to_DEC PROC NEAR
   RET
 
 ASCII_to_DEC ENDP
+
+CREA_TABLA PROC NEAR
+  ;;Cargamos en BX el valor de la frecuencia en Hz
+  MOV BX,0
+  MOV BX, WORD PTR [DI]
+  ;;Dividimos Sample_Rate (8000) entre la frecuencia. Cociente guardado en AX, resto en DX
+  MOV DX,0
+  MOV AX, 8000
+  DIV BX
+  ;;Comprobamos si el cociente es par (debe tener el mismo nº de picos que de "valles")
+  MOV DX,0
+  MOV CX,2
+  DIV CX ;;AX tam oscilacion, DX si es par (0) o impar (1)
+
+;;Usamos CX para contador
+  MOV CX, 0
+  MOV DI, OFFSET tabla
+   
+  RELLENA_TABLA:
+    MOV CX, AX
+    BUCLE_50:
+      MOV BYTE PTR [DI], 50
+      ADD DI, 1
+      LOOP BUCLE_50
+    MOV CX, AX
+    BUCLE_MEN50:
+      MOV BYTE PTR[DI], -50
+      ADD DI,1
+      LOOP BUCLE_MEN50
+    DEC BX
+    CMP BX,0
+    JNE RELLENA_TABLA
+
+  RET
+
+CREA_TABLA ENDP
+
 
 CODE ENDS
 END INICIO
