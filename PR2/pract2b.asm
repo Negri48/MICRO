@@ -9,7 +9,7 @@ DATOS SEGMENT
   fichero db 30, 33 dup(0),13, 10, '$' ;nombre del fichero
   textonombre db "Introduzca el nombre del archivo: ",13,10,'$'; Texto que se mostrara por pantalla 
   textofrec db "Frecuencia (Hz) deseada: ",13,10,'$'; Texto que se mostrara por pantalla
-  textoquit db "quit" ;Palabra que indica el fin del bucle
+  
   salida db "Hasta luego!",'$' ;Palabra que indica el fin del bucle
   salidanoquit db "Salida NORMAL!",'$' ;Palabra que indica el fin del bucle
   frecuencia db 4 dup(0), 13, 10, '$'
@@ -26,7 +26,8 @@ PILA SEGMENT STACK "STACK"
 PILA ENDS 
 ;************************************************************************** 
 ; DEFINICION DEL SEGMENTO EXTRA 
-EXTRA SEGMENT 
+EXTRA SEGMENT
+textoquit db "quit" ;Palabra que indica el fin del bucle
 EXTRA ENDS 
 ;************************************************************************** 
 ; DEFINICION DEL SEGMENTO DE CODIGO 
@@ -73,9 +74,9 @@ FUNC_PRINCIPAL PROC NEAR
     MOV nombrefichero[BX], 0
     ;;Si lo que hemos introducido es "quit" tenemos que terminar el programa
     CLD
-    MOV CX, 10 ;;Inicializamos una cantidad de Bytes (4 valen porque "quit cabe")
+    MOV CX, 4 ;;Inicializamos una cantidad de Bytes (4 valen porque q u i t)
     MOV DI, OFFSET textoquit
-    LEA SI, OFFSET fichero 
+    MOV SI, OFFSET fichero 
     REPE CMPSB 
     JE TERMINA
 
