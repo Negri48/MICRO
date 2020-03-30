@@ -92,12 +92,11 @@ FUNC_PRINCIPAL PROC NEAR
     ;Leemos el nombre del archivo escrito por teclado
     MOV AH, 0AH ;Función captura de teclado
     MOV DX, OFFSET frecuencia 
-    MOV frecuencia[0], 30
+    MOV frecuencia[0], 5
     INT 21H
     
 
     MOV DI, OFFSET frecuencia
-    ADD DI, 2
     CALL ASCII_to_DEC
 
     ;Modificar la tabla para que oscile tantas veces como la frecuenca que se pasa como argumento
@@ -152,35 +151,31 @@ FUNC_PRINCIPAL ENDP
 
 ASCII_to_DEC PROC NEAR
 
-  MOV AX, [DI]
   MOV BX, 0
-  MOV BL, AL
-  SUB BX, 48
-  MOV AX, 1000
-  MUL BX
-  MOV CX, AX
+  MOV BL, BYTE PTR[DI+1]
+  ADD DI, 2
+  DEC BX
+  ADD DI, BX
+  INC BX
+  MOV DX,0
+  MOV CX, 0
+  MOV SI, 1
 
-  MOV AX, [DI]
-  MOV BX, 0
-  MOV BL, AH
-  SUB BX, 48
-  MOV AX, 100
-  MUL BX
-  ADD CX, AX
+  BUCLE:
 
-  MOV AX, [DI+2]
-  MOV BX, 0
-  MOV BL, AL
-  SUB BX, 48
-  MOV AX, 10
-  MUL BX
-  ADD CX, AX
+    MOV DL, BYTE PTR[DI]
+    SUB DX, 48
+    MOV AX, SI
+    MUL DX
+    ADD CX, AX
+    DEC BX
+    DEC DI
+    MOV AX, 10
+    MUL SI
+    MOV SI, AX
 
-  MOV AX, [DI+2]
-  MOV BX, 0
-  MOV BL, AH
-  SUB BX, 48
-  ADD CX, BX
+    CMP BX, 0
+    JNZ BUCLE
 
   MOV DI, OFFSET frec_hex
   MOV WORD PTR[DI], CX
