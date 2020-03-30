@@ -3,7 +3,7 @@
 ;**************************************************************************
 ;DEFINICION DEL SEGMENTO DE DATOS 
 DATOS SEGMENT
-  tabla db 444 dup (9 dup (50), 9 dup (-50)), 8 dup (50); Tabla de 8000 bytes de la onda ya inicializada, 444*18 + 8 = 8000
+  tabla db 8000 dup(0); Tabla de 8000 bytes de la onda ya inicializada, 444*18 + 8 = 8000
 ;9 bytes arriba (50), despues 9 bytes abajo (-50), y asi sucesivamente.
   nombrefichero db 0, 0;nombre
   fichero db 30, 33 dup(0),13, 10, '$' ;nombre del fichero
@@ -13,6 +13,8 @@ DATOS SEGMENT
   salida db "Hasta luego!",'$' ;Palabra que indica el fin del bucle
   salidanoquit db "Salida NORMAL!",'$' ;Palabra que indica el fin del bucle
   frecuencia db 4 dup(0), 13, 10, '$'
+
+  frec_hex db 2 dup(0),13,10,'$'
 
   EXTRN Init_WAV_header:FAR
   EXTRN fopen:FAR
@@ -73,9 +75,9 @@ FUNC_PRINCIPAL PROC NEAR
     MOV nombrefichero[BX], 0
     ;;Si lo que hemos introducido es "quit" tenemos que terminar el programa
     CLD
-    MOV CX, 10 ;;Inicializamos una cantidad de Bytes (4 valen porque "quit cabe")
+    MOV CX, 5 ;;Inicializamos una cantidad de Bytes (4 valen porque "quit cabe")
     MOV DI, OFFSET textoquit
-    LEA SI, OFFSET fichero 
+    MOV SI, OFFSET fichero 
     REPE CMPSB 
     JE TERMINA
 
@@ -91,11 +93,29 @@ FUNC_PRINCIPAL PROC NEAR
     MOV DX, OFFSET frecuencia 
     MOV frecuencia[0], 30
     INT 21H
-     ;;Al leer debemos quitar los dos primeros bytes que los utiliza el SO
-    MOV BL, frecuencia[1]
-    MOV BH, 0
-    ADD BX, 2
-    MOV frecuencia[BX], 0
+    
+
+    MOV DI, OFFSET frecuencia
+    ADD DI, 2
+    CALL ASCII_to_DEC
+
+
+    ;Inicializar el modulo WAV especificando la frecuencia de muestreo
+    ;SAMPLE RATE
+    MOV DX, 8000
+    ;NUMBER OF SAMPLES
+    MOV CX, 8000
+    ;Llamada a la funcion
+    CALL Init_WAV_Header
+
+    ;Abrimos un fichero en el disco
+    ;Guardamos en DX la direccion del nombre del fichero, OFFSET devuelve donde empieza fichero
+    MOV DX, OFFSET fichero
+    CALL fopen
+
+    ;Modificar la tabla para que oscile tantas veces como la frecuenca que se pasa como argumento
+    MOV DI, OFFSET frec_hex
+    MOV AX, WORD PTR [DI]
 
     ;Imprime el texto de salida del programa
     MOV DX, OFFSET salidanoquit ; DX : offset al inicio del texto a imprimir
@@ -116,6 +136,45 @@ FUNC_PRINCIPAL PROC NEAR
   RET 
 
 FUNC_PRINCIPAL ENDP
+
+ASCII_to_DEC PROC NEAR
+
+  MOV AX, [DI]
+  MOV BX, 0
+  MOV BL, AL
+  SUB BX, 48
+  MOV AX, 1000
+  MUL BX
+  MOV CX, AX
+
+  MOV AX, [DI]
+  MOV BX, 0
+  MOV BL, AH
+  SUB BX, 48
+  MOV AX, 100
+  MUL BX
+  ADD CX, AX
+
+  MOV AX, [DI+2]
+  MOV BX, 0
+  MOV BL, AL
+  SUB BX, 48
+  MOV AX, 10
+  MUL BX
+  ADD CX, AX
+
+  MOV AX, [DI+2]
+  MOV BX, 0
+  MOV BL, AH
+  SUB BX, 48
+  ADD CX, BX
+
+  MOV DI, OFFSET frec_hex
+  MOV WORD PTR[DI], CX
+
+  RET
+
+ASCII_to_DEC ENDP
 
 CODE ENDS
 END INICIO
